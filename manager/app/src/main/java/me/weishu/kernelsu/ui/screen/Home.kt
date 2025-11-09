@@ -10,6 +10,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
@@ -56,6 +59,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.pm.PackageInfoCompat
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.generated.destinations.InstallScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -68,6 +73,9 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.getKernelVersion
 import me.weishu.kernelsu.ui.component.DropdownItem
 import me.weishu.kernelsu.ui.component.KsuIsValid
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.util.checkNewVersion
 import me.weishu.kernelsu.ui.util.getModuleCount
@@ -80,14 +88,12 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -109,6 +115,7 @@ fun HomePager(
 ) {
     val kernelVersion = getKernelVersion()
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
 
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -116,9 +123,102 @@ fun HomePager(
 
     Scaffold(
         topBar = {
-            TopBar(
-                kernelVersion = kernelVersion,
-                onSettingsClick = {
+            TopAppBar(
+                title = "",
+                color = Color.Transparent,
+                scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
+            )
+        },
+        popupHost = { },
+        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
+    ) { innerPadding ->
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .layerBackdrop(backdrop)
+                    .background(colorScheme.background)
+                    .height(getWindowSize().height.dp)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .padding(horizontal = 12.dp),
+                contentPadding = innerPadding,
+                overscrollEffect = null,
+            ) {
+                item {
+                    ModernSectionTitle(
+                        title = stringResource(id = R.string.app_name),
+                        modifier = Modifier
+                            .displayCutoutPadding()
+                            .padding(top = innerPadding.calculateTopPadding() + 80.dp)
+                    )
+                }
+                item {
+                    val coroutineScope = rememberCoroutineScope()
+                    val isManager = Natives.isManager
+                    val ksuVersion = if (isManager) Natives.version else null
+                    val lkmMode = ksuVersion?.let {
+                        if (kernelVersion.isGKI()) Natives.isLkmMode else null
+                    }
+
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (isManager && Natives.requireNewKernel()) {
+                            WarningCard(
+                                stringResource(id = R.string.require_kernel_version).format(
+                                    ksuVersion, Natives.MINIMAL_SUPPORTED_KERNEL
+                                )
+                            )
+                        }
+                        if (ksuVersion != null && !rootAvailable()) {
+                            WarningCard(
+                                stringResource(id = R.string.grant_root_failed)
+                            )
+                        }
+                        StatusCard(
+                            kernelVersion, ksuVersion, lkmMode,
+                            onClickInstall = {
+                                navigator.navigate(InstallScreenDestination) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onClickSuperuser = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(1)
+                                }
+                            },
+                            onclickModule = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(2)
+                                }
+                            }
+                        )
+
+                        if (checkUpdate) {
+                            UpdateCard()
+                        }
+                        InfoCard()
+                        DonateCard()
+                        LearnMoreCard()
+                    }
+                    Spacer(Modifier.height(bottomInnerPadding))
+                }
+            }
+        }
+        Row(
+            Modifier
+                .displayCutoutPadding()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LiquidButton(
+                onClick = {
                     navigator.navigate(SettingScreenDestination) {
                         popUpTo(SettingScreenDestination) {
                             inclusive = true
@@ -126,84 +226,90 @@ fun HomePager(
                         launchSingleTop = true
                     }
                 },
-                onInstallClick = {
-                    navigator.navigate(InstallScreenDestination) {
-                        popUpTo(InstallScreenDestination) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-        popupHost = { },
-        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .height(getWindowSize().height.dp)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .padding(horizontal = 12.dp),
-            contentPadding = innerPadding,
-            overscrollEffect = null,
-        ) {
-            item {
-                val coroutineScope = rememberCoroutineScope()
-                val isManager = Natives.isManager
-                val ksuVersion = if (isManager) Natives.version else null
-                val lkmMode = ksuVersion?.let {
-                    if (kernelVersion.isGKI()) Natives.isLkmMode else null
-                }
+                modifier = Modifier.size(40.dp),
+                backdrop = backdrop
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Useful.Settings,
+                    contentDescription = stringResource(id = R.string.settings),
+                    tint = colorScheme.onBackground
+                )
+            }
 
-                Column(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (kernelVersion.isGKI()) {
+                LiquidButton(
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop,
+                    onClick = {
+                        navigator.navigate(InstallScreenDestination) {
+                            popUpTo(InstallScreenDestination) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    },
                 ) {
-                    if (isManager && Natives.requireNewKernel()) {
-                        WarningCard(
-                            stringResource(id = R.string.require_kernel_version).format(
-                                ksuVersion, Natives.MINIMAL_SUPPORTED_KERNEL
-                            )
-                        )
-                    }
-                    if (ksuVersion != null && !rootAvailable()) {
-                        WarningCard(
-                            stringResource(id = R.string.grant_root_failed)
-                        )
-                    }
-                    StatusCard(
-                        kernelVersion, ksuVersion, lkmMode,
-                        onClickInstall = {
-                            navigator.navigate(InstallScreenDestination) {
-                                launchSingleTop = true
-                            }
-                        },
-                        onClickSuperuser = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(1)
-                            }
-                        },
-                        onclickModule = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(2)
-                            }
-                        }
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Save,
+                        contentDescription = stringResource(id = R.string.install),
+                        tint = colorScheme.onBackground
                     )
-
-                    if (checkUpdate) {
-                        UpdateCard()
-                    }
-                    InfoCard()
-                    DonateCard()
-                    LearnMoreCard()
                 }
-                Spacer(Modifier.height(bottomInnerPadding))
+            }
+            val showTopPopup = remember { mutableStateOf(false) }
+            KsuIsValid {
+                LiquidButton(
+                    onClick = { showTopPopup.value = true },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Reboot,
+                        contentDescription = stringResource(id = R.string.reboot),
+                        tint = colorScheme.onBackground
+                    )
+                }
+                ListPopup(
+                    show = showTopPopup,
+                    popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                    alignment = PopupPositionProvider.Align.TopRight,
+                    onDismissRequest = {
+                        showTopPopup.value = false
+                    }
+                ) {
+                    val pm = LocalContext.current.getSystemService(Context.POWER_SERVICE) as PowerManager?
+
+                    @Suppress("DEPRECATION")
+                    val isRebootingUserspaceSupported =
+                        pm?.isRebootingUserspaceSupported == true
+
+                    ListPopupColumn {
+                        val rebootOptions = mutableListOf(
+                            Pair(R.string.reboot, ""),
+                            Pair(R.string.reboot_recovery, "recovery"),
+                            Pair(R.string.reboot_bootloader, "bootloader"),
+                            Pair(R.string.reboot_download, "download"),
+                            Pair(R.string.reboot_edl, "edl")
+                        )
+                        if (isRebootingUserspaceSupported) {
+                            rebootOptions.add(1, Pair(R.string.reboot_userspace, "userspace"))
+                        }
+                        rebootOptions.forEachIndexed { idx, (id, reason) ->
+                            RebootDropdownItem(
+                                id = id,
+                                reason = reason,
+                                showTopPopup = showTopPopup,
+                                optionSize = rebootOptions.size,
+                                index = idx
+                            )
+                        }
+                    }
+                }
             }
         }
+        TopBarBackground(backdrop)
     }
 }
 
@@ -265,95 +371,6 @@ fun RebootDropdownItem(
             showTopPopup.value = false
         },
         index = index
-    )
-}
-
-@Composable
-private fun TopBar(
-    kernelVersion: KernelVersion,
-    onInstallClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    scrollBehavior: ScrollBehavior,
-) {
-    TopAppBar(
-        title = stringResource(R.string.app_name),
-        navigationIcon = {
-            IconButton(
-                modifier = Modifier.padding(start = 16.dp),
-                onClick = onSettingsClick
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Settings,
-                    contentDescription = stringResource(id = R.string.settings),
-                    tint = colorScheme.onBackground
-                )
-            }
-        },
-        actions = {
-            if (kernelVersion.isGKI()) {
-                IconButton(
-                    modifier = Modifier.padding(end = 16.dp),
-                    onClick = onInstallClick,
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Useful.Save,
-                        contentDescription = stringResource(id = R.string.install),
-                        tint = colorScheme.onBackground
-                    )
-                }
-            }
-            val showTopPopup = remember { mutableStateOf(false) }
-            KsuIsValid {
-                IconButton(
-                    modifier = Modifier.padding(end = 16.dp),
-                    onClick = { showTopPopup.value = true },
-                    holdDownState = showTopPopup.value
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Useful.Reboot,
-                        contentDescription = stringResource(id = R.string.reboot),
-                        tint = colorScheme.onBackground
-                    )
-                }
-                ListPopup(
-                    show = showTopPopup,
-                    popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                    alignment = PopupPositionProvider.Align.TopRight,
-                    onDismissRequest = {
-                        showTopPopup.value = false
-                    }
-                ) {
-                    val pm = LocalContext.current.getSystemService(Context.POWER_SERVICE) as PowerManager?
-
-                    @Suppress("DEPRECATION")
-                    val isRebootingUserspaceSupported =
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm?.isRebootingUserspaceSupported == true
-
-                    ListPopupColumn {
-                        val rebootOptions = mutableListOf(
-                            Pair(R.string.reboot, ""),
-                            Pair(R.string.reboot_recovery, "recovery"),
-                            Pair(R.string.reboot_bootloader, "bootloader"),
-                            Pair(R.string.reboot_download, "download"),
-                            Pair(R.string.reboot_edl, "edl")
-                        )
-                        if (isRebootingUserspaceSupported) {
-                            rebootOptions.add(1, Pair(R.string.reboot_userspace, "userspace"))
-                        }
-                        rebootOptions.forEachIndexed { idx, (id, reason) ->
-                            RebootDropdownItem(
-                                id = id,
-                                reason = reason,
-                                showTopPopup = showTopPopup,
-                                optionSize = rebootOptions.size,
-                                index = idx
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        scrollBehavior = scrollBehavior
     )
 }
 

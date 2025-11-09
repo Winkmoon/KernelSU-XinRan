@@ -96,6 +96,7 @@ ksp {
 }
 
 dependencies {
+    implementation(libs.backdrop)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
 

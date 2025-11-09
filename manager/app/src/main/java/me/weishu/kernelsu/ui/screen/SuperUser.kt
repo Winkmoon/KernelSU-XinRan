@@ -21,13 +21,16 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -57,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.generated.destinations.AppProfileScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.delay
@@ -65,13 +70,15 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.AppIconImage
 import me.weishu.kernelsu.ui.component.DropdownItem
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
 import me.weishu.kernelsu.ui.component.SearchBox
 import me.weishu.kernelsu.ui.component.SearchPager
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import me.weishu.kernelsu.ui.viewmodel.SuperUserViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
@@ -115,6 +122,7 @@ fun SuperUserPager(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
     val listState = rememberLazyListState()
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
@@ -122,58 +130,12 @@ fun SuperUserPager(
 
     Scaffold(
         topBar = {
-            searchStatus.TopAppBarAnim {
-                TopAppBar(
-                    title = stringResource(R.string.superuser),
-                    actions = {
-                        val showTopPopup = remember { mutableStateOf(false) }
-                        ListPopup(
-                            show = showTopPopup,
-                            popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                            alignment = PopupPositionProvider.Align.TopRight,
-                            onDismissRequest = {
-                                showTopPopup.value = false
-                            }
-                        ) {
-                            ListPopupColumn {
-                                DropdownItem(
-                                    text = if (viewModel.showSystemApps) {
-                                        stringResource(R.string.hide_system_apps)
-                                    } else {
-                                        stringResource(R.string.show_system_apps)
-                                    },
-                                    optionSize = 1,
-                                    onSelectedIndexChange = {
-                                        viewModel.showSystemApps = !viewModel.showSystemApps
-                                        prefs.edit {
-                                            putBoolean("show_system_apps", viewModel.showSystemApps)
-                                        }
-                                        scope.launch {
-                                            viewModel.fetchAppList()
-                                        }
-                                        showTopPopup.value = false
-                                    },
-                                    index = 0
-                                )
-                            }
-                        }
-                        IconButton(
-                            modifier = Modifier.padding(end = 16.dp),
-                            onClick = {
-                                showTopPopup.value = true
-                            },
-                            holdDownState = showTopPopup.value
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Useful.ImmersionMore,
-                                tint = MiuixTheme.colorScheme.onSurface,
-                                contentDescription = stringResource(id = R.string.settings)
-                            )
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            }
+            TopAppBar(
+                title = "",
+                color = Color.Transparent,
+                scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
+            )
         },
         popupHost = {
             searchStatus.SearchPager(
@@ -201,87 +163,160 @@ fun SuperUserPager(
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        val layoutDirection = LocalLayoutDirection.current
-        searchStatus.SearchBox(
-            searchBarTopPadding = dynamicTopPadding,
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                start = innerPadding.calculateStartPadding(layoutDirection),
-                end = innerPadding.calculateEndPadding(layoutDirection)
-            ),
-        ) { boxHeight ->
-            var isRefreshing by rememberSaveable { mutableStateOf(false) }
-            val pullToRefreshState = rememberPullToRefreshState()
-            LaunchedEffect(isRefreshing) {
-                if (isRefreshing) {
-                    delay(350)
-                    viewModel.fetchAppList()
-                    isRefreshing = false
-                }
-            }
-            val refreshTexts = listOf(
-                stringResource(R.string.refresh_pulling),
-                stringResource(R.string.refresh_release),
-                stringResource(R.string.refresh_refresh),
-                stringResource(R.string.refresh_complete),
-            )
-            if (viewModel.appList.value.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = innerPadding.calculateTopPadding(),
-                            start = innerPadding.calculateStartPadding(layoutDirection),
-                            end = innerPadding.calculateEndPadding(layoutDirection),
-                            bottom = bottomInnerPadding
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (viewModel.isRefreshing) "Loading..." else "Empty",
-                        textAlign = TextAlign.Center,
-                        color = Color.Gray,
-                    )
-                }
-            } else {
-                PullToRefresh(
-                    isRefreshing = isRefreshing,
-                    pullToRefreshState = pullToRefreshState,
-                    onRefresh = { isRefreshing = true },
-                    refreshTexts = refreshTexts,
+        Box(Modifier.fillMaxSize()) {
+            val layoutDirection = LocalLayoutDirection.current
+            Column {
+                Spacer(Modifier
+                    .displayCutoutPadding()
+                    .padding(top = 40.dp))
+                searchStatus.SearchBox(
+                    searchBarTopPadding = dynamicTopPadding,
                     contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
+                        top = innerPadding.calculateTopPadding(),
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     ),
-                ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .height(getWindowSize().height.dp)
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
-                            start = innerPadding.calculateStartPadding(layoutDirection),
-                            end = innerPadding.calculateEndPadding(layoutDirection)
-                        ),
-                        overscrollEffect = null,
-                    ) {
-                        items(viewModel.appList.value, key = { it.packageName + it.uid }) { app ->
-                            AppItem(app) {
-                                navigator.navigate(AppProfileScreenDestination(app)) {
-                                    launchSingleTop = true
+                ) { boxHeight ->
+                    var isRefreshing by rememberSaveable { mutableStateOf(false) }
+                    val pullToRefreshState = rememberPullToRefreshState()
+                    LaunchedEffect(isRefreshing) {
+                        if (isRefreshing) {
+                            delay(350)
+                            viewModel.fetchAppList()
+                            isRefreshing = false
+                        }
+                    }
+                    val refreshTexts = listOf(
+                        stringResource(R.string.refresh_pulling),
+                        stringResource(R.string.refresh_release),
+                        stringResource(R.string.refresh_refresh),
+                        stringResource(R.string.refresh_complete),
+                    )
+                    if (viewModel.appList.value.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .layerBackdrop(backdrop)
+                                .background(MiuixTheme.colorScheme.background)
+                                .fillMaxSize()
+                                .padding(
+                                    top = innerPadding.calculateTopPadding(),
+                                    start = innerPadding.calculateStartPadding(layoutDirection),
+                                    end = innerPadding.calculateEndPadding(layoutDirection),
+                                    bottom = bottomInnerPadding
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (viewModel.isRefreshing) "Loading..." else "Empty",
+                                textAlign = TextAlign.Center,
+                                color = Color.Gray,
+                            )
+                        }
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isRefreshing,
+                            pullToRefreshState = pullToRefreshState,
+                            onRefresh = { isRefreshing = true },
+                            refreshTexts = refreshTexts,
+                            contentPadding = PaddingValues(
+                                top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
+                                start = innerPadding.calculateStartPadding(layoutDirection),
+                                end = innerPadding.calculateEndPadding(layoutDirection)
+                            ),
+                        ) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .layerBackdrop(backdrop)
+                                    .background(MiuixTheme.colorScheme.background)
+                                    .height(getWindowSize().height.dp)
+                                    .scrollEndHaptic()
+                                    .overScrollVertical()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = PaddingValues(
+                                    top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
+                                    start = innerPadding.calculateStartPadding(layoutDirection),
+                                    end = innerPadding.calculateEndPadding(layoutDirection)
+                                ),
+                                overscrollEffect = null,
+                            ) {
+                                items(viewModel.appList.value, key = { it.packageName + it.uid }) { app ->
+                                    AppItem(app) {
+                                        navigator.navigate(AppProfileScreenDestination(app)) {
+                                            launchSingleTop = true
+                                        }
+                                    }
+                                }
+                                item {
+                                    Spacer(Modifier.height(bottomInnerPadding))
                                 }
                             }
-                        }
-                        item {
-                            Spacer(Modifier.height(bottomInnerPadding))
                         }
                     }
                 }
             }
+            searchStatus.TopAppBarAnim {
+                ModernSectionTitle(
+                    title = stringResource(id = R.string.superuser),
+                    modifier = Modifier
+                        .displayCutoutPadding()
+                        .padding(top = innerPadding.calculateTopPadding() + 10.dp)
+                )
+                Row(
+                    Modifier
+                        .displayCutoutPadding()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    val showTopPopup = remember { mutableStateOf(false) }
+                    ListPopup(
+                        show = showTopPopup,
+                        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                        alignment = PopupPositionProvider.Align.TopRight,
+                        onDismissRequest = {
+                            showTopPopup.value = false
+                        }
+                    ) {
+                        ListPopupColumn {
+                            DropdownItem(
+                                text = if (viewModel.showSystemApps) {
+                                    stringResource(R.string.hide_system_apps)
+                                } else {
+                                    stringResource(R.string.show_system_apps)
+                                },
+                                optionSize = 1,
+                                onSelectedIndexChange = {
+                                    viewModel.showSystemApps = !viewModel.showSystemApps
+                                    prefs.edit {
+                                        putBoolean("show_system_apps", viewModel.showSystemApps)
+                                    }
+                                    scope.launch {
+                                        viewModel.fetchAppList()
+                                    }
+                                    showTopPopup.value = false
+                                },
+                                index = 0
+                            )
+                        }
+                    }
+                    LiquidButton(
+                        onClick = { showTopPopup.value = true },
+                        modifier = Modifier.size(40.dp),
+                        backdrop = backdrop
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Useful.ImmersionMore,
+                            tint = MiuixTheme.colorScheme.onSurface,
+                            contentDescription = stringResource(id = R.string.settings)
+                        )
+                    }
+                }
+            }
+            TopBarBackground(backdrop)
         }
     }
 }

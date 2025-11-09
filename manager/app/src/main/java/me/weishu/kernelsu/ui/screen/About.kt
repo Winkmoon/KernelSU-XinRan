@@ -3,8 +3,10 @@ package me.weishu.kernelsu.ui.screen
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -12,6 +14,8 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -19,8 +23,10 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,15 +40,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.capsule.ContinuousRoundedRectangle
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import me.weishu.kernelsu.BuildConfig
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
@@ -53,12 +63,14 @@ import top.yukonga.miuix.kmp.icon.icons.useful.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
 @Destination<RootGraph>
 fun AboutScreen(navigator: DestinationsNavigator) {
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
 
     val htmlString = stringResource(
         id = R.string.about_source_code,
@@ -70,87 +82,115 @@ fun AboutScreen(navigator: DestinationsNavigator) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(R.string.about),
-                navigationIcon = {
-                    IconButton(
-                        modifier = Modifier.padding(start = 16.dp),
-                        onClick = dropUnlessResumed { navigator.popBackStack() }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Useful.Back,
-                            contentDescription = null,
-                            tint = colorScheme.onBackground
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior
+                title = "",
+                color = Color.Transparent,
+                scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
             )
         },
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .height(getWindowSize().height.dp)
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .padding(horizontal = 12.dp),
-            contentPadding = innerPadding,
-            overscrollEffect = null,
-        ) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(vertical = 48.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .layerBackdrop(backdrop)
+                    .background(colorScheme.background)
+                    .height(getWindowSize().height.dp)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .padding(horizontal = 12.dp),
+                contentPadding = innerPadding,
+                overscrollEffect = null,
+            ) {
+                item {
+                    ModernSectionTitle(
+                        title = stringResource(id = R.string.about),
                         modifier = Modifier
-                            .size(80.dp)
-                            .clip(ContinuousRoundedRectangle(16.dp))
-                            .background(Color.White)
+                            .displayCutoutPadding()
+                            .padding(top = innerPadding.calculateTopPadding() + 80.dp)
+                    )
+                }
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .padding(vertical = 48.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "icon",
-                            contentScale = FixedScale(1f)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(ContinuousRoundedRectangle(16.dp))
+                                .background(Color.White)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                contentDescription = "icon",
+                                contentScale = FixedScale(1f)
+                            )
+                        }
+                        Text(
+                            modifier = Modifier.padding(top = 12.dp),
+                            text = stringResource(id = R.string.app_name),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 26.sp
+                        )
+                        Text(
+                            text = BuildConfig.VERSION_NAME,
+                            fontSize = 14.sp
                         )
                     }
-                    Text(
-                        modifier = Modifier.padding(top = 12.dp),
-                        text = stringResource(id = R.string.app_name),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 26.sp
-                    )
-                    Text(
-                        text = BuildConfig.VERSION_NAME,
-                        fontSize = 14.sp
+                }
+                item {
+                    Card(
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        result.forEach {
+                            SuperArrow(
+                                title = it.fullText,
+                                onClick = {
+                                    uriHandler.openUri(it.url)
+                                }
+                            )
+                        }
+                    }
+                    Spacer(
+                        Modifier.height(
+                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding() +
+                                    56.dp
+                        )
                     )
                 }
             }
-            item {
-                Card(
-                    modifier = Modifier.padding(bottom = 12.dp)
+            Row(
+                Modifier
+                    .displayCutoutPadding()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LiquidButton(
+                    onClick = dropUnlessResumed { navigator.popBackStack() },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
                 ) {
-                    result.forEach {
-                        SuperArrow(
-                            title = it.fullText,
-                            onClick = {
-                                uriHandler.openUri(it.url)
-                            }
-                        )
-                    }
-                }
-                Spacer(
-                    Modifier.height(
-                        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                                WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Back,
+                        contentDescription = null,
+                        tint = colorScheme.onBackground
                     )
-                )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
             }
+            TopBarBackground(backdrop)
         }
     }
 }

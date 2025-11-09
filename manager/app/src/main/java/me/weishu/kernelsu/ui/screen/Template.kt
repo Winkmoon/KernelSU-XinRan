@@ -3,8 +3,10 @@ package me.weishu.kernelsu.ui.screen
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +20,8 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -27,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -63,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.TemplateEditorScreenDestination
@@ -74,12 +81,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.DropdownItem
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import me.weishu.kernelsu.ui.viewmodel.TemplateViewModel
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
@@ -87,7 +96,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
@@ -115,6 +123,7 @@ fun AppProfileTemplateScreen(
     val viewModel = viewModel<TemplateViewModel>()
     val scope = rememberCoroutineScope()
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
 
     LaunchedEffect(Unit) {
         if (viewModel.templateList.isEmpty()) {
@@ -161,47 +170,11 @@ fun AppProfileTemplateScreen(
 
     Scaffold(
         topBar = {
-            val clipboardManager = LocalClipboardManager.current
-            val context = LocalContext.current
-            val showToast = fun(msg: String) {
-                scope.launch(Dispatchers.Main) {
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                }
-            }
-            TopBar(
-                onBack = dropUnlessResumed { navigator.popBackStack() },
-                onSync = {
-                    scope.launch { viewModel.fetchTemplates(true) }
-                },
-                onImport = {
-                    clipboardManager.getText()?.text?.let {
-                        if (it.isEmpty()) {
-                            showToast(context.getString(R.string.app_profile_template_import_empty))
-                            return@let
-                        }
-                        scope.launch {
-                            viewModel.importTemplates(
-                                it, {
-                                    showToast(context.getString(R.string.app_profile_template_import_success))
-                                    viewModel.fetchTemplates(false)
-                                },
-                                showToast
-                            )
-                        }
-                    }
-                },
-                onExport = {
-                    scope.launch {
-                        viewModel.exportTemplates(
-                            {
-                                showToast(context.getString(R.string.app_profile_template_export_empty))
-                            }
-                        ) {
-                            clipboardManager.setText(AnnotatedString(it))
-                        }
-                    }
-                },
+            TopAppBar(
+                title = "",
+                color = Color.Transparent,
                 scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
             )
         },
         floatingActionButton = {
@@ -234,59 +207,184 @@ fun AppProfileTemplateScreen(
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        var isRefreshing by rememberSaveable { mutableStateOf(false) }
-        val pullToRefreshState = rememberPullToRefreshState()
-        LaunchedEffect(isRefreshing) {
-            if (isRefreshing) {
-                delay(350)
-                viewModel.fetchTemplates()
-                isRefreshing = false
+        Box(Modifier.fillMaxSize()) {
+            var isRefreshing by rememberSaveable { mutableStateOf(false) }
+            val pullToRefreshState = rememberPullToRefreshState()
+            LaunchedEffect(isRefreshing) {
+                if (isRefreshing) {
+                    delay(350)
+                    viewModel.fetchTemplates()
+                    isRefreshing = false
+                }
             }
-        }
-        val refreshTexts = listOf(
-            stringResource(R.string.refresh_pulling),
-            stringResource(R.string.refresh_release),
-            stringResource(R.string.refresh_refresh),
-            stringResource(R.string.refresh_complete),
-        )
-        val layoutDirection = LocalLayoutDirection.current
-        PullToRefresh(
-            isRefreshing = isRefreshing,
-            pullToRefreshState = pullToRefreshState,
-            onRefresh = { isRefreshing = true },
-            refreshTexts = refreshTexts,
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 12.dp,
-                start = innerPadding.calculateStartPadding(layoutDirection),
-                end = innerPadding.calculateEndPadding(layoutDirection)
-            ),
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .height(getWindowSize().height.dp)
-                    .scrollEndHaptic()
-                    .overScrollVertical()
-                    .nestedScroll(nestedScrollConnection)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = 12.dp),
-                contentPadding = innerPadding,
-                overscrollEffect = null
+            val refreshTexts = listOf(
+                stringResource(R.string.refresh_pulling),
+                stringResource(R.string.refresh_release),
+                stringResource(R.string.refresh_refresh),
+                stringResource(R.string.refresh_complete),
+            )
+            val layoutDirection = LocalLayoutDirection.current
+            PullToRefresh(
+                isRefreshing = isRefreshing,
+                pullToRefreshState = pullToRefreshState,
+                onRefresh = { isRefreshing = true },
+                refreshTexts = refreshTexts,
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding() + 12.dp,
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    end = innerPadding.calculateEndPadding(layoutDirection)
+                ),
             ) {
-                item {
-                    Spacer(Modifier.height(12.dp))
-                }
-                items(viewModel.templateList, key = { it.id }) { app ->
-                    TemplateItem(navigator, app)
-                }
-                item {
-                    Spacer(
-                        Modifier.height(
-                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
+                LazyColumn(
+                    modifier = Modifier
+                        .layerBackdrop(backdrop)
+                        .background(colorScheme.background)
+                        .height(getWindowSize().height.dp)
+                        .scrollEndHaptic()
+                        .overScrollVertical()
+                        .nestedScroll(nestedScrollConnection)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .padding(horizontal = 12.dp),
+                    contentPadding = innerPadding,
+                    overscrollEffect = null
+                ) {
+                    item {
+                        ModernSectionTitle(
+                            title = stringResource(id = R.string.settings_profile_template),
+                            modifier = Modifier
+                                .displayCutoutPadding()
+                                .padding(top = innerPadding.calculateTopPadding() + 80.dp)
                         )
+                    }
+                    item {
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    items(viewModel.templateList, key = { it.id }) { app ->
+                        TemplateItem(navigator, app)
+                    }
+                    item {
+                        Spacer(
+                            Modifier.height(
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                                        WindowInsets.captionBar.asPaddingValues().calculateBottomPadding() +
+                                        56.dp
+                            )
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier
+                    .displayCutoutPadding()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LiquidButton(
+                    onClick = dropUnlessResumed { navigator.popBackStack() },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Back,
+                        contentDescription = null,
+                        tint = colorScheme.onBackground
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                LiquidButton(
+                    onClick = {
+                        scope.launch { viewModel.fetchTemplates(true) }
+                    },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Refresh,
+                        contentDescription = stringResource(id = R.string.app_profile_template_sync),
+                        tint = colorScheme.onBackground
+                    )
+                }
+
+                val showTopPopup = remember { mutableStateOf(false) }
+                LiquidButton(
+                    onClick = { showTopPopup.value = true },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Copy,
+                        contentDescription = stringResource(id = R.string.app_profile_import_export),
+                        tint = colorScheme.onBackground
+                    )
+                }
+                ListPopup(
+                    show = showTopPopup,
+                    popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                    alignment = PopupPositionProvider.Align.TopRight,
+                    onDismissRequest = {
+                        showTopPopup.value = false
+                    }
+                ) {
+                    val clipboardManager = LocalClipboardManager.current
+                    val context = LocalContext.current
+                    ListPopupColumn {
+                        val items = listOf(
+                            stringResource(id = R.string.app_profile_import_from_clipboard),
+                            stringResource(id = R.string.app_profile_export_to_clipboard)
+                        )
+                        items.forEachIndexed { index, text ->
+                            DropdownItem(
+                                text = text,
+                                optionSize = items.size,
+                                index = index,
+                                onSelectedIndexChange = { selectedIndex ->
+                                    val showToast = fun(msg: String) {
+                                        scope.launch(Dispatchers.Main) {
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    if (selectedIndex == 0) {
+                                        // Import
+                                        clipboardManager.getText()?.text?.let {
+                                            if (it.isEmpty()) {
+                                                showToast(context.getString(R.string.app_profile_template_import_empty))
+                                                return@let
+                                            }
+                                            scope.launch {
+                                                viewModel.importTemplates(
+                                                    it, {
+                                                        showToast(context.getString(R.string.app_profile_template_import_success))
+                                                        viewModel.fetchTemplates(false)
+                                                    },
+                                                    showToast
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        // Export
+                                        scope.launch {
+                                            viewModel.exportTemplates(
+                                                {
+                                                    showToast(context.getString(R.string.app_profile_template_export_empty))
+                                                }
+                                            ) {
+                                                clipboardManager.setText(AnnotatedString(it))
+                                            }
+                                        }
+                                    }
+                                    showTopPopup.value = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
+            TopBarBackground(backdrop)
         }
     }
 }
@@ -401,85 +499,4 @@ private fun InfoChip(icon: ImageVector, text: String) {
             color = colorScheme.onSurfaceSecondary
         )
     }
-}
-
-@Composable
-private fun TopBar(
-    onBack: () -> Unit,
-    onSync: () -> Unit = {},
-    onImport: () -> Unit = {},
-    onExport: () -> Unit = {},
-    scrollBehavior: ScrollBehavior,
-) {
-    TopAppBar(
-        title = stringResource(R.string.settings_profile_template),
-        navigationIcon = {
-            IconButton(
-                modifier = Modifier.padding(start = 16.dp),
-                onClick = onBack
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Back,
-                    contentDescription = null,
-                    tint = colorScheme.onBackground
-                )
-            }
-        },
-        actions = {
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = onSync
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Refresh,
-                    contentDescription = stringResource(id = R.string.app_profile_template_sync),
-                    tint = colorScheme.onBackground
-                )
-            }
-
-            val showTopPopup = remember { mutableStateOf(false) }
-            ListPopup(
-                show = showTopPopup,
-                popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                alignment = PopupPositionProvider.Align.TopRight,
-                onDismissRequest = {
-                    showTopPopup.value = false
-                }
-            ) {
-                ListPopupColumn {
-                    val items = listOf(
-                        stringResource(id = R.string.app_profile_import_from_clipboard),
-                        stringResource(id = R.string.app_profile_export_to_clipboard)
-                    )
-                    items.forEachIndexed { index, text ->
-                        DropdownItem(
-                            text = text,
-                            optionSize = items.size,
-                            index = index,
-                            onSelectedIndexChange = { selectedIndex ->
-                                if (selectedIndex == 0) {
-                                    onImport()
-                                } else {
-                                    onExport()
-                                }
-                                showTopPopup.value = false
-                            }
-                        )
-                    }
-                }
-            }
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = { showTopPopup.value = true },
-                holdDownState = showTopPopup.value
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Copy,
-                    contentDescription = stringResource(id = R.string.app_profile_import_export),
-                    tint = colorScheme.onBackground
-                )
-            }
-        },
-        scrollBehavior = scrollBehavior
-    )
 }

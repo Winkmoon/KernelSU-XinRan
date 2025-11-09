@@ -3,7 +3,10 @@ package me.weishu.kernelsu.ui.screen
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +16,8 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -20,6 +25,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -43,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AppProfileTemplateScreenDestination
@@ -53,7 +61,10 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.AppIconImage
 import me.weishu.kernelsu.ui.component.DropdownItem
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
 import me.weishu.kernelsu.ui.component.SuperDropdown
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import me.weishu.kernelsu.ui.component.profile.AppProfileConfig
 import me.weishu.kernelsu.ui.component.profile.RootProfileConfig
 import me.weishu.kernelsu.ui.component.profile.TemplateConfig
@@ -66,14 +77,12 @@ import me.weishu.kernelsu.ui.viewmodel.SuperUserViewModel
 import me.weishu.kernelsu.ui.viewmodel.getTemplateInfoById
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperSwitch
@@ -97,6 +106,7 @@ fun AppProfileScreen(
 ) {
     val context = LocalContext.current
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
     val scope = rememberCoroutineScope()
     val failToUpdateAppProfile = stringResource(R.string.failed_to_update_app_profile).format(appInfo.label).format(appInfo.uid)
     val failToUpdateSepolicy = stringResource(R.string.failed_to_update_sepolicy).format(appInfo.label)
@@ -113,86 +123,159 @@ fun AppProfileScreen(
 
     Scaffold(
         topBar = {
-            TopBar(
-                onBack = dropUnlessResumed { navigator.popBackStack() },
-                packageName = packageName,
+            TopAppBar(
+                title = "",
+                color = androidx.compose.ui.graphics.Color.Transparent,
                 scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
             )
         },
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .height(getWindowSize().height.dp)
-                .padding(top = 16.dp)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = innerPadding,
-            overscrollEffect = null
-        ) {
-            item {
-                AppProfileInner(
-                    packageName = appInfo.packageName,
-                    appLabel = appInfo.label,
-                    appIcon = {
-                        AppIconImage(
-                            packageInfo = appInfo.packageInfo,
-                            label = appInfo.label,
-                            modifier = Modifier
-                                .size(60.dp)
-                        )
-                    },
-                    appUid = appInfo.uid,
-                    appVersionName = appInfo.packageInfo.versionName ?: "",
-                    appVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        appInfo.packageInfo.longVersionCode
-                    } else {
-                        @Suppress("DEPRECATION")
-                        appInfo.packageInfo.versionCode.toLong()
-                    },
-                    profile = profile,
-                    onViewTemplate = {
-                        getTemplateInfoById(it)?.let { info ->
-                            navigator.navigate(TemplateEditorScreenDestination(info)) {
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .layerBackdrop(backdrop)
+                    .background(colorScheme.background)
+                    .height(getWindowSize().height.dp)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = innerPadding,
+                overscrollEffect = null
+            ) {
+                item {
+                    ModernSectionTitle(
+                        title = stringResource(id = R.string.profile),
+                        modifier = Modifier
+                            .displayCutoutPadding()
+                            .padding(top = innerPadding.calculateTopPadding() + 80.dp)
+                    )
+                }
+                item {
+                    AppProfileInner(
+                        packageName = appInfo.packageName,
+                        appLabel = appInfo.label,
+                        appIcon = {
+                            AppIconImage(
+                                packageInfo = appInfo.packageInfo,
+                                label = appInfo.label,
+                                modifier = Modifier
+                                    .size(60.dp)
+                            )
+                        },
+                        appUid = appInfo.uid,
+                        appVersionName = appInfo.packageInfo.versionName ?: "",
+                        appVersionCode = appInfo.packageInfo.longVersionCode,
+                        profile = profile,
+                        onViewTemplate = {
+                            getTemplateInfoById(it)?.let { info ->
+                                navigator.navigate(TemplateEditorScreenDestination(info)) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        onManageTemplate = {
+                            navigator.navigate(AppProfileTemplateScreenDestination()) {
                                 launchSingleTop = true
                             }
-                        }
-                    },
-                    onManageTemplate = {
-                        navigator.navigate(AppProfileTemplateScreenDestination()) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onProfileChange = {
-                        scope.launch {
-                            if (it.allowSu) {
-                                // sync with allowlist.c - forbid_system_uid
-                                if (appInfo.uid < 2000 && appInfo.uid != 1000) {
-                                    Toast.makeText(context, suNotAllowed, Toast.LENGTH_SHORT).show()
-                                    return@launch
+                        },
+                        onProfileChange = {
+                            scope.launch {
+                                if (it.allowSu) {
+                                    // sync with allowlist.c - forbid_system_uid
+                                    if (appInfo.uid < 2000 && appInfo.uid != 1000) {
+                                        Toast.makeText(context, suNotAllowed, Toast.LENGTH_SHORT).show()
+                                        return@launch
+                                    }
+                                    if (!it.rootUseDefault && it.rules.isNotEmpty() && !setSepolicy(profile.name, it.rules)) {
+                                        Toast.makeText(context, failToUpdateSepolicy, Toast.LENGTH_SHORT).show()
+                                        return@launch
+                                    }
                                 }
-                                if (!it.rootUseDefault && it.rules.isNotEmpty() && !setSepolicy(profile.name, it.rules)) {
-                                    Toast.makeText(context, failToUpdateSepolicy, Toast.LENGTH_SHORT).show()
-                                    return@launch
+                                if (!Natives.setAppProfile(it)) {
+                                    Toast.makeText(context, failToUpdateAppProfile, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    profile = it
                                 }
                             }
-                            if (!Natives.setAppProfile(it)) {
-                                Toast.makeText(context, failToUpdateAppProfile, Toast.LENGTH_SHORT).show()
-                            } else {
-                                profile = it
-                            }
-                        }
-                    },
-                )
-                Spacer(
-                    Modifier.height(
-                        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                                WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
+                        },
                     )
-                )
+                    Spacer(
+                        Modifier.height(
+                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding())
+                    )
+                }
             }
+            Row(
+                Modifier
+                    .displayCutoutPadding()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LiquidButton(
+                    onClick = dropUnlessResumed { navigator.popBackStack() },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Back,
+                        contentDescription = null,
+                        tint = colorScheme.onBackground
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                val showTopPopup = remember { mutableStateOf(false) }
+                LiquidButton(
+                    onClick = { showTopPopup.value = true },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.ImmersionMore,
+                        tint = colorScheme.onSurface,
+                        contentDescription = stringResource(id = R.string.settings)
+                    )
+                }
+                ListPopup(
+                    show = showTopPopup,
+                    onDismissRequest = { showTopPopup.value = false },
+                    popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                    alignment = PopupPositionProvider.Align.TopRight,
+                ) {
+                    ListPopupColumn {
+                        val items = listOf(
+                            stringResource(id = R.string.launch_app),
+                            stringResource(id = R.string.force_stop_app),
+                            stringResource(id = R.string.restart_app)
+                        )
+
+                        items.forEachIndexed { index, text ->
+                            DropdownItem(
+                                text = text,
+                                optionSize = items.size,
+                                index = index,
+                                onSelectedIndexChange = { selectedIndex ->
+                                    when (selectedIndex) {
+                                        0 -> launchApp(packageName)
+                                        1 -> forceStopApp(packageName)
+                                        2 -> restartApp(packageName)
+                                    }
+                                    showTopPopup.value = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            TopBarBackground(backdrop)
         }
     }
 }
@@ -380,74 +463,6 @@ private enum class Mode() {
     Default(),
     Template(),
     Custom();
-}
-
-@Composable
-private fun TopBar(
-    onBack: () -> Unit,
-    packageName: String,
-    scrollBehavior: ScrollBehavior,
-) {
-    TopAppBar(
-        title = stringResource(R.string.profile),
-        navigationIcon = {
-            IconButton(
-                modifier = Modifier.padding(start = 16.dp),
-                onClick = onBack
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Back,
-                    contentDescription = null,
-                    tint = colorScheme.onBackground
-                )
-            }
-        },
-        actions = {
-            val showTopPopup = remember { mutableStateOf(false) }
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = { showTopPopup.value = true },
-                holdDownState = showTopPopup.value
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.ImmersionMore,
-                    tint = colorScheme.onSurface,
-                    contentDescription = stringResource(id = R.string.settings)
-                )
-            }
-            ListPopup(
-                show = showTopPopup,
-                onDismissRequest = { showTopPopup.value = false },
-                popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                alignment = PopupPositionProvider.Align.TopRight,
-            ) {
-                ListPopupColumn {
-                    val items = listOf(
-                        stringResource(id = R.string.launch_app),
-                        stringResource(id = R.string.force_stop_app),
-                        stringResource(id = R.string.restart_app)
-                    )
-
-                    items.forEachIndexed { index, text ->
-                        DropdownItem(
-                            text = text,
-                            optionSize = items.size,
-                            index = index,
-                            onSelectedIndexChange = { selectedIndex ->
-                                when (selectedIndex) {
-                                    0 -> launchApp(packageName)
-                                    1 -> forceStopApp(packageName)
-                                    2 -> restartApp(packageName)
-                                }
-                                showTopPopup.value = false
-                            }
-                        )
-                    }
-                }
-            }
-        },
-        scrollBehavior = scrollBehavior
-    )
 }
 
 @Composable

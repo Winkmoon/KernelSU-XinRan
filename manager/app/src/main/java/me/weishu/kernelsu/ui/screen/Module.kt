@@ -1,9 +1,11 @@
 package me.weishu.kernelsu.ui.screen
 
+import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -31,14 +34,18 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -81,8 +88,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.generated.destinations.ExecuteModuleActionScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
+import com.ramcosta.composedestinations.generated.destinations.InstallScreenDestination
+import com.ramcosta.composedestinations.generated.destinations.SettingScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -94,8 +105,12 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.component.ConfirmResult
 import me.weishu.kernelsu.ui.component.DropdownImpl
+import me.weishu.kernelsu.ui.component.KsuIsValid
+import me.weishu.kernelsu.ui.component.LiquidButton
+import me.weishu.kernelsu.ui.component.ModernSectionTitle
 import me.weishu.kernelsu.ui.component.SearchBox
 import me.weishu.kernelsu.ui.component.SearchPager
+import me.weishu.kernelsu.ui.component.TopBarBackground
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
 import me.weishu.kernelsu.ui.util.DownloadListener
@@ -124,11 +139,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.useful.ImmersionMore
+import top.yukonga.miuix.kmp.icon.icons.useful.Reboot
+import top.yukonga.miuix.kmp.icon.icons.useful.Save
+import top.yukonga.miuix.kmp.icon.icons.useful.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
+@SuppressLint("StringFormatInvalid")
 @Composable
 fun ModulePager(
     navigator: DestinationsNavigator,
@@ -343,144 +363,11 @@ fun ModulePager(
         targetValue = if (fabVisible) 0.dp else 180.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
         animationSpec = tween(durationMillis = 350)
     )
+    val backdrop = rememberLayerBackdrop()
 
     Scaffold(
-        topBar = {
-            searchStatus.TopAppBarAnim {
-                TopAppBar(
-                    title = stringResource(R.string.module),
-                    actions = {
-                        val showTopPopup = remember { mutableStateOf(false) }
-                        ListPopup(
-                            show = showTopPopup,
-                            popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                            alignment = PopupPositionProvider.Align.TopRight,
-                            onDismissRequest = {
-                                showTopPopup.value = false
-                            }
-                        ) {
-                            ListPopupColumn {
-                                DropdownImpl(
-                                    text = stringResource(R.string.module_sort_action_first),
-                                    optionSize = 2,
-                                    isSelected = viewModel.sortActionFirst,
-                                    onSelectedIndexChange = {
-                                        viewModel.sortActionFirst = !viewModel.sortActionFirst
-                                        prefs.edit {
-                                            putBoolean("module_sort_action_first", viewModel.sortActionFirst)
-                                        }
-                                        scope.launch {
-                                            viewModel.fetchModuleList()
-                                        }
-                                        showTopPopup.value = false
-                                    },
-                                    index = 0
-                                )
-                                DropdownImpl(
-                                    text = stringResource(R.string.module_sort_enabled_first),
-                                    optionSize = 2,
-                                    isSelected = viewModel.sortEnabledFirst,
-                                    onSelectedIndexChange = {
-                                        viewModel.sortEnabledFirst = !viewModel.sortEnabledFirst
-                                        prefs.edit {
-                                            putBoolean("module_sort_enabled_first", viewModel.sortEnabledFirst)
-                                        }
-                                        scope.launch {
-                                            viewModel.fetchModuleList()
-                                        }
-                                        showTopPopup.value = false
-                                    },
-                                    index = 1
-                                )
-                            }
-                        }
-                        IconButton(
-                            modifier = Modifier.padding(end = 16.dp),
-                            onClick = { showTopPopup.value = true },
-                            holdDownState = showTopPopup.value
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Useful.ImmersionMore,
-                                tint = colorScheme.onSurface,
-                                contentDescription = stringResource(id = R.string.settings)
-                            )
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            }
-        },
         floatingActionButton = {
-            if (!hideInstallButton) {
-                val moduleInstall = stringResource(id = R.string.module_install)
-                val confirmTitle = stringResource(R.string.module)
-                var zipUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-                val confirmDialog = rememberConfirmDialog(
-                    onConfirm = {
-                        navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(zipUris))) {
-                            launchSingleTop = true
-                        }
-                        viewModel.markNeedRefresh()
-                    }
-                )
-                val selectZipLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.StartActivityForResult()
-                ) {
-                    if (it.resultCode != RESULT_OK) {
-                        return@rememberLauncherForActivityResult
-                    }
-                    val data = it.data ?: return@rememberLauncherForActivityResult
-                    val clipData = data.clipData
 
-                    val uris = mutableListOf<Uri>()
-                    if (clipData != null) {
-                        for (i in 0 until clipData.itemCount) {
-                            clipData.getItemAt(i)?.uri?.let { it -> uris.add(it) }
-                        }
-                    } else {
-                        data.data?.let { it -> uris.add(it) }
-                    }
-
-                    if (uris.size == 1) {
-                        navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(uris.first())))) {
-                            launchSingleTop = true
-                        }
-                    } else if (uris.size > 1) {
-                        // multiple files selected
-                        val moduleNames =
-                            uris.mapIndexed { index, uri -> "\n${index + 1}. ${uri.getFileName(context)}" }.joinToString("")
-                        val confirmContent = context.getString(R.string.module_install_prompt_with_name, moduleNames)
-                        zipUris = uris
-                        confirmDialog.showConfirm(
-                            title = confirmTitle,
-                            content = confirmContent
-                        )
-                    }
-                }
-                FloatingActionButton(
-                    modifier = Modifier
-                        .offset(y = offsetHeight)
-                        .padding(bottom = bottomInnerPadding + 20.dp, end = 20.dp)
-                        .border(0.05.dp, colorScheme.outline.copy(alpha = 0.5f), CircleShape),
-                    shadowElevation = 0.dp,
-                    onClick = {
-                        // Select the zip files to install
-                        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                            type = "application/zip"
-                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                        }
-                        selectZipLauncher.launch(intent)
-                    },
-                    content = {
-                        Icon(
-                            Icons.Rounded.Add,
-                            moduleInstall,
-                            modifier = Modifier.size(40.dp),
-                            tint = Color.White
-                        )
-                    },
-                )
-            }
         },
         popupHost = {
             searchStatus.SearchPager(
@@ -573,76 +460,239 @@ fun ModulePager(
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        when {
-            hasMagisk -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        stringResource(R.string.module_magisk_conflict),
-                        textAlign = TextAlign.Center,
-                    )
+        Box(Modifier.fillMaxSize()) {
+            when {
+                hasMagisk -> {
+                    Box(
+                        modifier = Modifier
+                            .layerBackdrop(backdrop)
+                            .background(colorScheme.background)
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.module_magisk_conflict),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                else -> {
+                    val layoutDirection = LocalLayoutDirection.current
+                    Column {
+                        Spacer(Modifier
+                            .displayCutoutPadding()
+                            .padding(top = 40.dp))
+                        searchStatus.SearchBox(
+                            searchBarTopPadding = dynamicTopPadding,
+                            contentPadding = PaddingValues(
+                                top = innerPadding.calculateTopPadding(),
+                                start = innerPadding.calculateStartPadding(layoutDirection),
+                                end = innerPadding.calculateEndPadding(layoutDirection)
+                            ),
+                        ) { boxHeight ->
+                            ModuleList(
+                                navigator,
+                                viewModel = viewModel,
+                                modifier = Modifier
+                                    .layerBackdrop(backdrop)
+                                    .background(colorScheme.background)
+                                    .height(getWindowSize().height.dp)
+                                    .scrollEndHaptic()
+                                    .overScrollVertical()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                                    .nestedScroll(nestedScrollConnection),
+                                scope = scope,
+                                modules = modules,
+                                onInstallModule = {
+                                    navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(it)))) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onClickModule = { id, name, hasWebUi ->
+                                    onModuleClick(id, name, hasWebUi)
+                                },
+                                onModuleUninstall = { module ->
+                                    onModuleUninstall(module)
+                                },
+                                onModuleToggle = { module ->
+                                    onModuleToggle(module)
+                                },
+                                onModuleUpdate = { module, changelogUrl, downloadUrl, fileName ->
+                                    onModuleUpdate(
+                                        module,
+                                        changelogUrl,
+                                        downloadUrl,
+                                        fileName,
+                                        context
+                                    ) { uri ->
+                                        navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(uri)))) {
+                                            launchSingleTop = true
+                                        }
+                                    }
+                                },
+                                context = context,
+                                innerPadding = innerPadding,
+                                bottomInnerPadding = bottomInnerPadding,
+                                boxHeight = boxHeight
+                            )
+                        }
+                    }
                 }
             }
-
-            else -> {
-                val layoutDirection = LocalLayoutDirection.current
-                searchStatus.SearchBox(
-                    searchBarTopPadding = dynamicTopPadding,
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        start = innerPadding.calculateStartPadding(layoutDirection),
-                        end = innerPadding.calculateEndPadding(layoutDirection)
-                    ),
-                ) { boxHeight ->
-                    ModuleList(
-                        navigator,
-                        viewModel = viewModel,
-                        modifier = Modifier
-                            .height(getWindowSize().height.dp)
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .nestedScroll(nestedScrollConnection),
-                        scope = scope,
-                        modules = modules,
-                        onInstallModule = {
-                            navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(it)))) {
+            searchStatus.TopAppBarAnim {
+                ModernSectionTitle(
+                    title = stringResource(id = R.string.module),
+                    modifier = Modifier
+                        .displayCutoutPadding()
+                        .padding(top = innerPadding.calculateTopPadding() + 10.dp)
+                )
+                Row(
+                    Modifier
+                        .displayCutoutPadding()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    val showTopPopup = remember { mutableStateOf(false) }
+                    ListPopup(
+                        show = showTopPopup,
+                        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                        alignment = PopupPositionProvider.Align.TopRight,
+                        onDismissRequest = {
+                            showTopPopup.value = false
+                        }
+                    ) {
+                        ListPopupColumn {
+                            DropdownImpl(
+                                text = stringResource(R.string.module_sort_action_first),
+                                optionSize = 2,
+                                isSelected = viewModel.sortActionFirst,
+                                onSelectedIndexChange = {
+                                    viewModel.sortActionFirst = !viewModel.sortActionFirst
+                                    prefs.edit {
+                                        putBoolean("module_sort_action_first", viewModel.sortActionFirst)
+                                    }
+                                    scope.launch {
+                                        viewModel.fetchModuleList()
+                                    }
+                                    showTopPopup.value = false
+                                },
+                                index = 0
+                            )
+                            DropdownImpl(
+                                text = stringResource(R.string.module_sort_enabled_first),
+                                optionSize = 2,
+                                isSelected = viewModel.sortEnabledFirst,
+                                onSelectedIndexChange = {
+                                    viewModel.sortEnabledFirst = !viewModel.sortEnabledFirst
+                                    prefs.edit {
+                                        putBoolean("module_sort_enabled_first", viewModel.sortEnabledFirst)
+                                    }
+                                    scope.launch {
+                                        viewModel.fetchModuleList()
+                                    }
+                                    showTopPopup.value = false
+                                },
+                                index = 1
+                            )
+                        }
+                    }
+                    LiquidButton(
+                        onClick = { showTopPopup.value = true },
+                        modifier = Modifier.size(40.dp),
+                        backdrop = backdrop
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Useful.ImmersionMore,
+                            tint = colorScheme.onSurface,
+                            contentDescription = stringResource(id = R.string.settings)
+                        )
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomEnd)
+                    .safeDrawingPadding()
+            ) {
+                if (!hideInstallButton) {
+                    val moduleInstall = stringResource(id = R.string.module_install)
+                    val confirmTitle = stringResource(R.string.module)
+                    var zipUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+                    val confirmDialog = rememberConfirmDialog(
+                        onConfirm = {
+                            navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(zipUris))) {
                                 launchSingleTop = true
                             }
-                        },
-                        onClickModule = { id, name, hasWebUi ->
-                            onModuleClick(id, name, hasWebUi)
-                        },
-                        onModuleUninstall = { module ->
-                            onModuleUninstall(module)
-                        },
-                        onModuleToggle = { module ->
-                            onModuleToggle(module)
-                        },
-                        onModuleUpdate = { module, changelogUrl, downloadUrl, fileName ->
-                            onModuleUpdate(
-                                module,
-                                changelogUrl,
-                                downloadUrl,
-                                fileName,
-                                context
-                            ) { uri ->
-                                navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(uri)))) {
-                                    launchSingleTop = true
-                                }
+                            viewModel.markNeedRefresh()
+                        }
+                    )
+                    val selectZipLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.StartActivityForResult()
+                    ) {
+                        if (it.resultCode != RESULT_OK) {
+                            return@rememberLauncherForActivityResult
+                        }
+                        val data = it.data ?: return@rememberLauncherForActivityResult
+                        val clipData = data.clipData
+
+                        val uris = mutableListOf<Uri>()
+                        if (clipData != null) {
+                            for (i in 0 until clipData.itemCount) {
+                                clipData.getItemAt(i)?.uri?.let { it -> uris.add(it) }
                             }
+                        } else {
+                            data.data?.let { it -> uris.add(it) }
+                        }
+
+                        if (uris.size == 1) {
+                            navigator.navigate(FlashScreenDestination(FlashIt.FlashModules(listOf(uris.first())))) {
+                                launchSingleTop = true
+                            }
+                        } else if (uris.size > 1) {
+                            // multiple files selected
+                            val moduleNames =
+                                uris.mapIndexed { index, uri -> "\n${index + 1}. ${uri.getFileName(context)}" }.joinToString("")
+                            val confirmContent = context.getString(R.string.module_install_prompt_with_name, moduleNames)
+                            zipUris = uris
+                            confirmDialog.showConfirm(
+                                title = confirmTitle,
+                                content = confirmContent
+                            )
+                        }
+                    }
+                    LiquidButton(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(y = offsetHeight)
+                            .padding(bottom = bottomInnerPadding + 20.dp, end = 20.dp),
+                        surfaceColor = colorScheme.primaryVariant.copy(0.75f),
+                        onClick = {
+                            // Select the zip files to install
+                            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                type = "application/zip"
+                                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                            }
+                            selectZipLauncher.launch(intent)
                         },
-                        context = context,
-                        innerPadding = innerPadding,
-                        bottomInnerPadding = bottomInnerPadding,
-                        boxHeight = boxHeight
+                        backdrop = backdrop,
+                        content = {
+                            Icon(
+                                Icons.Rounded.Add,
+                                moduleInstall,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.White
+                            )
+                        },
                     )
                 }
             }
+            TopBarBackground(backdrop)
         }
     }
 }

@@ -8,12 +8,18 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -22,19 +28,18 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.rememberNavController
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.animations.NavHostAnimatedDestinationStyle
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.ui.component.BottomBar
@@ -120,11 +125,8 @@ fun MainScreen(navController: DestinationsNavigator) {
     val activity = LocalActivity.current
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.background,
-        tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.8f))
-    )
+    val backdrop = rememberLayerBackdrop()
+
     val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope) {
         { page ->
             coroutineScope.launch { pagerState.animateScrollToPage(page) }
@@ -147,19 +149,29 @@ fun MainScreen(navController: DestinationsNavigator) {
     ) {
         Scaffold(
             bottomBar = {
-                BottomBar(hazeState, hazeStyle)
-            },
+                BottomBar(backdrop = backdrop)
+            }
         ) { innerPadding ->
-            HorizontalPager(
-                modifier = Modifier.hazeSource(state = hazeState),
-                state = pagerState,
-                beyondViewportPageCount = 2,
-                userScrollEnabled = false
-            ) {
-                when (it) {
-                    0 -> HomePager(pagerState, navController, innerPadding.calculateBottomPadding())
-                    1 -> SuperUserPager(navController, innerPadding.calculateBottomPadding())
-                    2 -> ModulePager(navController, innerPadding.calculateBottomPadding())
+            Box {
+                HorizontalPager(
+                    modifier = Modifier.layerBackdrop(backdrop),
+                    state = pagerState,
+                    beyondViewportPageCount = 2,
+                    userScrollEnabled = false
+                ) {
+                    when (it) {
+                        0 -> HomePager(pagerState, navController, innerPadding.calculateBottomPadding())
+                        1 -> SuperUserPager(navController, innerPadding.calculateBottomPadding())
+                        2 -> ModulePager(navController, innerPadding.calculateBottomPadding())
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .safeDrawingPadding()
+                ) {
+
                 }
             }
         }
