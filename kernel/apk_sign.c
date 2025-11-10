@@ -19,10 +19,6 @@
 #include "klog.h" // IWYU pragma: keep
 // 已删除：#include "kernel_compat.h"
 
-// 保留酸奶/KernelSU的签名配置
-#define EXPECTED_SIZE 844
-#define EXPECTED_HASH "afb9dd88c9e5ccf9326aaba8e81d007f8b243b77e7542664562733c4137e3cc5"
-
 struct sdesc {
     struct shash_desc shash;
     char ctx[];
