@@ -56,14 +56,6 @@ $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repo
 ccflags-y += -DKSU_VERSION=16
 endif
 
-ifndef KSU_EXPECTED_SIZE
-KSU_EXPECTED_SIZE := 0x34C
-endif
-
-ifndef KSU_EXPECTED_HASH
-KSU_EXPECTED_HASH := afb9dd88c9e5ccf9326aaba8e81d007f8b243b77e7542664562733c4137e3cc5
-endif
-
 ifdef KSU_MANAGER_PACKAGE
 ccflags-y += -DKSU_MANAGER_PACKAGE=\"$(KSU_MANAGER_PACKAGE)\"
 $(info -- KernelSU Manager package name: $(KSU_MANAGER_PACKAGE))
