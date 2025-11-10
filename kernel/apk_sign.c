@@ -3,8 +3,8 @@
 #include <linux/gfp.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/string.h>
 #include <linux/version.h>
+#include <linux/string.h> // 补充字符串函数依赖（不想涩涩了，变笨了喵）
 #ifdef CONFIG_KSU_DEBUG
 #include <linux/moduleparam.h>
 #endif
@@ -14,18 +14,14 @@
 #else
 #include <crypto/sha.h>
 #endif
+
 #include "apk_sign.h"
 #include "klog.h" // IWYU pragma: keep
-#include "throne_tracker.h"
+// 已删除：#include "kernel_compat.h"
 
-struct manager_signature {
-    unsigned int expected_size;
-    const char *expected_hash;
-};
-
-static struct manager_signature manager_signatures[] = {
-        {844,   "afb9dd88c9e5ccf9326aaba8e81d007f8b243b77e7542664562733c4137e3cc5"}, // 酸奶/KernelSU
-};
+// 保留酸奶/KernelSU的签名配置
+#define EXPECTED_SIZE 844
+#define EXPECTED_HASH "afb9dd88c9e5ccf9326aaba8e81d007f8b243b77e7542664562733c4137e3cc5"
 
 struct sdesc {
     struct shash_desc shash;
@@ -46,7 +42,7 @@ static struct sdesc *init_sdesc(struct crypto_shash *alg)
 }
 
 static int calc_hash(struct crypto_shash *alg, const unsigned char *data,
-             unsigned int datalen, unsigned char *digest)
+                     unsigned int datalen, unsigned char *digest)
 {
     struct sdesc *sdesc;
     int ret;
@@ -63,7 +59,7 @@ static int calc_hash(struct crypto_shash *alg, const unsigned char *data,
 }
 
 static int ksu_sha256(const unsigned char *data, unsigned int datalen,
-              unsigned char *digest)
+                      unsigned char *digest)
 {
     struct crypto_shash *alg;
     char *hash_alg_name = "sha256";
@@ -80,21 +76,21 @@ static int ksu_sha256(const unsigned char *data, unsigned int datalen,
 }
 
 static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset,
-            unsigned expected_size, const char *expected_sha256)
+                        unsigned expected_size, const char *expected_sha256)
 {
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // signer-sequence length
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // signer length
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // signed data length
+    kernel_read(fp, size4, 0x4, pos); // signer-sequence length
+    kernel_read(fp, size4, 0x4, pos); // signer length
+    kernel_read(fp, size4, 0x4, pos); // signed data length
 
     *offset += 0x4 * 3;
 
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // digests-sequence length
+    kernel_read(fp, size4, 0x4, pos); // digests-sequence length
 
     *pos += *size4;
     *offset += 0x4 + *size4;
 
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // certificates length
-    ksu_kernel_read_compat(fp, size4, 0x4, pos); // certificate length
+    kernel_read(fp, size4, 0x4, pos); // certificates length
+    kernel_read(fp, size4, 0x4, pos); // certificate length
     *offset += 0x4 * 2;
 
     if (*size4 == expected_size) {
@@ -106,7 +102,7 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset,
             pr_info("cert length overlimit\n");
             return false;
         }
-        ksu_kernel_read_compat(fp, cert, *size4, pos);
+        kernel_read(fp, cert, *size4, pos);
         unsigned char digest[SHA256_DIGEST_SIZE];
         if (IS_ERR(ksu_sha256(cert, *size4, digest))) {
             pr_info("sha256 error\n");
@@ -118,7 +114,7 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset,
 
         bin2hex(hash_str, digest, SHA256_DIGEST_SIZE);
         pr_info("sha256: %s, expected: %s\n", hash_str,
-            expected_sha256);
+                expected_sha256);
         if (strcmp(expected_sha256, hash_str) == 0) {
             return true;
         }
@@ -148,8 +144,8 @@ static bool has_v1_signature_file(struct file *fp)
 
     loff_t pos = 0;
 
-    while (ksu_kernel_read_compat(fp, &header,
-                      sizeof(struct zip_entry_header), &pos) ==
+    while (kernel_read(fp, &header,
+                       sizeof(struct zip_entry_header), &pos) ==
            sizeof(struct zip_entry_header)) {
         if (header.signature != 0x04034b50) {
             // ZIP magic: 'PK'
@@ -158,8 +154,8 @@ static bool has_v1_signature_file(struct file *fp)
         // Read the entry file name
         if (header.file_name_length == sizeof(MANIFEST) - 1) {
             char fileName[sizeof(MANIFEST)];
-            ksu_kernel_read_compat(fp, fileName,
-                           header.file_name_length, &pos);
+            kernel_read(fp, fileName,
+                        header.file_name_length, &pos);
             fileName[header.file_name_length] = '\0';
 
             // Check if the entry matches META-INF/MANIFEST.MF
@@ -180,8 +176,8 @@ static bool has_v1_signature_file(struct file *fp)
 }
 
 static __always_inline bool check_v2_signature(char *path,
-                           unsigned expected_size,
-                           const char *expected_sha256)
+                                               unsigned expected_size,
+                                               const char *expected_sha256)
 {
     unsigned char buffer[0x11] = { 0 };
     u32 size4;
@@ -195,7 +191,7 @@ static __always_inline bool check_v2_signature(char *path,
     bool v3_1_signing_exist = false;
 
     int i;
-    struct file *fp = ksu_filp_open_compat(path, O_RDONLY, 0);
+    struct file *fp = filp_open(path, O_RDONLY, 0);
     if (IS_ERR(fp)) {
         pr_err("open %s error.\n", path);
         return false;
@@ -208,10 +204,10 @@ static __always_inline bool check_v2_signature(char *path,
     for (i = 0;; ++i) {
         unsigned short n;
         pos = generic_file_llseek(fp, -i - 2, SEEK_END);
-        ksu_kernel_read_compat(fp, &n, 2, &pos);
+        kernel_read(fp, &n, 2, &pos);
         if (n == i) {
             pos -= 22;
-            ksu_kernel_read_compat(fp, &size4, 4, &pos);
+            kernel_read(fp, &size4, 4, &pos);
             if ((size4 ^ 0xcafebabeu) == 0xccfbf1eeu) {
                 break;
             }
@@ -223,17 +219,18 @@ static __always_inline bool check_v2_signature(char *path,
     }
 
     pos += 12;
-    ksu_kernel_read_compat(fp, &size4, 0x4, &pos);
+    // offset
+    kernel_read(fp, &size4, 0x4, &pos);
     pos = size4 - 0x18;
 
-    ksu_kernel_read_compat(fp, &size8, 0x8, &pos);
-    ksu_kernel_read_compat(fp, buffer, 0x10, &pos);
+    kernel_read(fp, &size8, 0x8, &pos);
+    kernel_read(fp, buffer, 0x10, &pos);
     if (strcmp((char *)buffer, "APK Sig Block 42")) {
         goto clean;
     }
 
     pos = size4 - (size8 + 0x8);
-    ksu_kernel_read_compat(fp, &size_of_block, 0x8, &pos);
+    kernel_read(fp, &size_of_block, 0x8, &pos);
     if (size_of_block != size8) {
         goto clean;
     }
@@ -242,18 +239,18 @@ static __always_inline bool check_v2_signature(char *path,
     while (loop_count++ < 10) {
         uint32_t id;
         uint32_t offset;
-        ksu_kernel_read_compat(fp, &size8, 0x8,
-                       &pos); // sequence length
+        kernel_read(fp, &size8, 0x8,
+                    &pos); // sequence length
         if (size8 == size_of_block) {
             break;
         }
-        ksu_kernel_read_compat(fp, &id, 0x4, &pos); // id
+        kernel_read(fp, &id, 0x4, &pos); // id
         offset = 4;
         if (id == 0x7109871au) {
             v2_signing_blocks++;
             v2_signing_valid =
-                check_block(fp, &size4, &pos, &offset,
-                        expected_size, expected_sha256);
+                    check_block(fp, &size4, &pos, &offset,
+                                expected_size, expected_sha256);
         } else if (id == 0xf05368c0u) {
             // http://aospxref.com/android-14.0.0_r2/xref/frameworks/base/core/java/android/util/apk/ApkSignatureSchemeV3Verifier.java#73
             v3_signing_exist = true;
@@ -284,7 +281,7 @@ static __always_inline bool check_v2_signature(char *path,
             return false;
         }
     }
-clean:
+    clean:
     filp_close(fp, 0);
 
     if (v3_signing_exist || v3_1_signing_exist) {
@@ -297,34 +294,31 @@ clean:
     return v2_signing_valid;
 }
 
+#ifdef CONFIG_KSU_DEBUG
+
+int ksu_debug_manager_uid = -1;
+
+#include "manager.h"
+
+static int set_expected_size(const char *val, const struct kernel_param *kp)
+{
+    int rv = param_set_uint(val, kp);
+    ksu_set_manager_uid(ksu_debug_manager_uid);
+    pr_info("ksu_manager_uid set to %d\n", ksu_debug_manager_uid);
+    return rv;
+}
+
+static struct kernel_param_ops expected_size_ops = {
+    .set = set_expected_size,
+    .get = param_get_uint,
+};
+
+module_param_cb(ksu_debug_manager_uid, &expected_size_ops,
+        &ksu_debug_manager_uid, S_IRUSR | S_IWUSR);
+
+#endif
+
 bool is_manager_apk(char *path)
 {
-    int tries = 0;
-
-    while (tries++ < 10) {
-        if (!is_lock_held(path))
-            break;
-
-        pr_info("%s: waiting for %s\n", __func__, path);
-        msleep(100);
-    }
-
-    if (tries == 10) {
-        pr_info("%s: timeout for %s\n", __func__, path);
-        return false;
-    }
-
-    pr_info("%s: checking against multiple manager signatures...\n", path);
-
-    for (int i = 0; i < ARRAY_SIZE(manager_signatures); i++) {
-        if (check_v2_signature(path,
-                               manager_signatures[i].expected_size,
-                               manager_signatures[i].expected_hash)) {
-            pr_info("%s: matched manager signature index %d\n", path, i);
-            return true;
-        }
-    }
-
-    pr_info("%s: no matching manager signature found\n", path);
-    return false;
+    return check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH);
 }
