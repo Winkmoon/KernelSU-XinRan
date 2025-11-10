@@ -16,7 +16,6 @@
 #endif
 #include "apk_sign.h"
 #include "klog.h" // IWYU pragma: keep
-#include "kernel_compat.h"
 #include "throne_tracker.h"
 
 struct manager_signature {
