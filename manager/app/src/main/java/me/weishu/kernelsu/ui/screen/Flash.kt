@@ -270,7 +270,6 @@ fun FlashScreen(
             }
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomEnd)
                     .safeDrawingPadding()
             ) {

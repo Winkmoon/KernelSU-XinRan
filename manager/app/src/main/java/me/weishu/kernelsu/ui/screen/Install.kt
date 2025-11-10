@@ -315,9 +315,9 @@ fun InstallScreen(navigator: DestinationsNavigator) {
             }
             Row(
                 Modifier
+                    .align(Alignment.BottomEnd)
                     .displayCutoutPadding()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .fillMaxWidth()
                     .wrapContentHeight(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
