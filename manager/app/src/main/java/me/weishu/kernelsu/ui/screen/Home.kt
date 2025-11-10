@@ -240,7 +240,7 @@ fun HomePager(
 
             if (kernelVersion.isGKI()) {
                 LiquidButton(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.padding(end = 16.dp).size(40.dp),
                     backdrop = backdrop,
                     onClick = {
                         navigator.navigate(InstallScreenDestination) {

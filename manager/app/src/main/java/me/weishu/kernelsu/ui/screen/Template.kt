@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -178,31 +179,7 @@ fun AppProfileTemplateScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                containerColor = colorScheme.primary,
-                shadowElevation = 0.dp,
-                onClick = {
-                    navigator.navigate(TemplateEditorScreenDestination(TemplateViewModel.TemplateInfo(), false)) {
-                        launchSingleTop = true
-                    }
-                },
-                modifier = Modifier
-                    .offset(y = offsetHeight)
-                    .padding(
-                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                                WindowInsets.captionBar.asPaddingValues().calculateBottomPadding() + 20.dp,
-                        end = 20.dp
-                    )
-                    .border(0.05.dp, colorScheme.outline.copy(alpha = 0.5f), CircleShape),
-                content = {
-                    Icon(
-                        Icons.Rounded.Add,
-                        null,
-                        Modifier.size(40.dp),
-                        tint = Color.White
-                    )
-                },
-            )
+
         },
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
@@ -311,17 +288,6 @@ fun AppProfileTemplateScreen(
                 }
 
                 val showTopPopup = remember { mutableStateOf(false) }
-                LiquidButton(
-                    onClick = { showTopPopup.value = true },
-                    modifier = Modifier.size(40.dp),
-                    backdrop = backdrop
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Useful.Copy,
-                        contentDescription = stringResource(id = R.string.app_profile_import_export),
-                        tint = colorScheme.onBackground
-                    )
-                }
                 ListPopup(
                     show = showTopPopup,
                     popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
@@ -383,6 +349,49 @@ fun AppProfileTemplateScreen(
                         }
                     }
                 }
+                LiquidButton(
+                    onClick = { showTopPopup.value = true },
+                    modifier = Modifier.size(40.dp),
+                    backdrop = backdrop
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Useful.Copy,
+                        contentDescription = stringResource(id = R.string.app_profile_import_export),
+                        tint = colorScheme.onBackground
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomEnd)
+                    .safeDrawingPadding()
+            ) {
+                LiquidButton(
+                    surfaceColor = colorScheme.primaryVariant.copy(0.75f),
+                    onClick = {
+                        navigator.navigate(TemplateEditorScreenDestination(TemplateViewModel.TemplateInfo(), false)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier
+                        .offset(y = offsetHeight)
+                        .padding(
+                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding() + 20.dp,
+                            end = 20.dp
+                        )
+                        .align(Alignment.BottomEnd),
+                    backdrop = backdrop,
+                    content = {
+                        Icon(
+                            Icons.Rounded.Add,
+                            null,
+                            Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    },
+                )
             }
             TopBarBackground(backdrop)
         }

@@ -783,7 +783,6 @@ private fun ModuleList(
                 onRefresh = { if (!isRefreshing) isRefreshing = true },
                 refreshTexts = refreshTexts,
                 contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                     start = innerPadding.calculateStartPadding(layoutDirection),
                     end = innerPadding.calculateEndPadding(layoutDirection),
                 ),
@@ -791,7 +790,6 @@ private fun ModuleList(
                 LazyColumn(
                     modifier = modifier.height(getWindowSize().height.dp),
                     contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection),
                     ),

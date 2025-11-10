@@ -219,7 +219,6 @@ fun SuperUserPager(
                             onRefresh = { isRefreshing = true },
                             refreshTexts = refreshTexts,
                             contentPadding = PaddingValues(
-                                top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                 start = innerPadding.calculateStartPadding(layoutDirection),
                                 end = innerPadding.calculateEndPadding(layoutDirection)
                             ),
@@ -234,7 +233,6 @@ fun SuperUserPager(
                                     .overScrollVertical()
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 contentPadding = PaddingValues(
-                                    top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                     start = innerPadding.calculateStartPadding(layoutDirection),
                                     end = innerPadding.calculateEndPadding(layoutDirection)
                                 ),
