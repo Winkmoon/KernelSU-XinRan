@@ -92,8 +92,6 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ramcosta.composedestinations.generated.destinations.ExecuteModuleActionScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
-import com.ramcosta.composedestinations.generated.destinations.InstallScreenDestination
-import com.ramcosta.composedestinations.generated.destinations.SettingScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -366,6 +364,14 @@ fun ModulePager(
     val backdrop = rememberLayerBackdrop()
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = "",
+                color = Color.Transparent,
+                scrollBehavior = scrollBehavior,
+                modifier = Modifier.height(0.dp)
+            )
+        },
         floatingActionButton = {
 
         },
