@@ -483,7 +483,7 @@ private fun StatusCard(
                                     text = stringResource(R.string.superuser),
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 15.sp,
-                                    color = colorScheme.onSurfaceVariantAction,
+                                    color = colorScheme.onSurfaceVariantActions,
                                 )
                                 Text(
                                     modifier = Modifier.fillMaxWidth(),
@@ -513,7 +513,7 @@ private fun StatusCard(
                                     text = stringResource(R.string.module),
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 15.sp,
-                                    color = colorScheme.onSurfaceVariantAction,
+                                    color = colorScheme.onSurfaceVariantActions,
                                 )
                                 Text(
                                     modifier = Modifier.fillMaxWidth(),
@@ -680,7 +680,7 @@ private fun InfoCard() {
         Text(
             text = content,
             fontSize = MiuixTheme.textStyles.body2.fontSize,
-            color = colorScheme.onSurfaceVariantAction,
+            color = colorScheme.onSurfaceVariantActions,
             modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
         )
     }
