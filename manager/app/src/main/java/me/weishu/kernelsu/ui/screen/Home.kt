@@ -10,6 +10,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -395,8 +397,8 @@ private fun StatusCard(
 
                 val workingMode = when (lkmMode) {
                     null -> ""
-                    true -> " <LKM>"
-                    else -> " <GKI>"
+                    true -> " <Module-Loader>"
+                    else -> " <Build-Kernel>"
                 }
 
                 val workingText = "${stringResource(id = R.string.home_working)}$workingMode$safeMode"
@@ -430,11 +432,10 @@ private fun StatusCard(
                                     .offset(38.dp, 45.dp),
                                 contentAlignment = Alignment.BottomEnd
                             ) {
-                                Icon(
-                                    modifier = Modifier.size(170.dp),
-                                    imageVector = Icons.Rounded.CheckCircleOutline,
-                                    tint = Color(0xFF36D167),
-                                    contentDescription = null
+                                Image(
+                                    painter = painterResource(id = R.drawable.xinran_starbai),
+                                    contentDescription = "状态图标",
+                                    modifier = Modifier.size(170.dp)
                                 )
                             }
                             Column(
@@ -458,6 +459,7 @@ private fun StatusCard(
                             }
                         }
                     }
+                    
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -481,7 +483,7 @@ private fun StatusCard(
                                     text = stringResource(R.string.superuser),
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 15.sp,
-                                    color = colorScheme.onSurfaceVariantSummary,
+                                    color = colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     modifier = Modifier.fillMaxWidth(),
@@ -511,7 +513,7 @@ private fun StatusCard(
                                     text = stringResource(R.string.module),
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 15.sp,
-                                    color = colorScheme.onSurfaceVariantSummary,
+                                    color = colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     modifier = Modifier.fillMaxWidth(),
@@ -678,7 +680,7 @@ private fun InfoCard() {
         Text(
             text = content,
             fontSize = MiuixTheme.textStyles.body2.fontSize,
-            color = colorScheme.onSurfaceVariantSummary,
+            color = colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
         )
     }
