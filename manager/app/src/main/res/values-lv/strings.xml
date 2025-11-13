@@ -97,7 +97,7 @@
     <string name="module_overlay_fs_not_available">Moduļi nav pieejami, jo kodols ir atspējojis OverlayFS!</string>
     <string name="safe_mode">Drošais režīms</string>
     <string name="module_magisk_conflict">Moduļi nav pieejami dēļ konflikta ar Magisk!</string>
-    <string name="home_support_content">KernelSU ir un vienmēr būs bezmaksas un atvērtā koda. Tomēr jūs varat parādīt mums, ka jums rūp, veicot ziedojumu.</string>
+    <string name="home_support_content">喵喵喵～瞧瞧欣然又在瞎搞什么～</string>
     <string name="profile_groups">Grupas</string>
     <string name="profile_namespace_global">Globāli</string>
     <string name="require_kernel_version">Pašreizējā KernelSU versija %d ir pārāk zema, lai pārvaldnieks darbotos pareizi. Lūdzu, atjauniniet uz versiju %d vai jaunāku!</string>

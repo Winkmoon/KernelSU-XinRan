@@ -31,7 +31,7 @@
     <string name="require_kernel_version">ಪ್ರಸ್ತುತ KernelSU ಆವೃತ್ತಿ %d ಮ್ಯಾನೇಜರ್ ಸರಿಯಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸಲು ತುಂಬಾ ಕಡಿಮೆಯಾಗಿದೆ. ದಯವಿಟ್ಟು ಆವೃತ್ತಿ %d ಅಥವಾ ಹೆಚ್ಚಿನದಕ್ಕೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ!</string>
     <string name="reboot_userspace">ಸಾಫ್ಟ್ ರೀಬೂಟ್</string>
     <string name="profile_name">ಪ್ರೊಫೈಲ್ ಹೆಸರು</string>
-    <string name="home_support_content">KernelSU ಉಚಿತ ಮತ್ತು ಮುಕ್ತ ಮೂಲವಾಗಿದೆ ಮತ್ತು ಯಾವಾಗಲೂ ಇರುತ್ತದೆ. ಆದಾಗ್ಯೂ ನೀವು ದೇಣಿಗೆ ನೀಡುವ ಮೂಲಕ ನೀವು ಕಾಳಜಿ ವಹಿಸುತ್ತೀರಿ ಎಂದು ನಮಗೆ ತೋರಿಸಬಹುದು.</string>
+    <string name="home_support_content">喵喵喵～瞧瞧欣然又在瞎搞什么～</string>
     <string name="uninstall">ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್</string>
     <string name="profile_namespace">ಮೌಂಟ್ ನೇಮ್‌ಸ್ಪೇಸ್</string>
     <string name="profile_selinux_rules">ನಿಯಮಗಳು</string>
